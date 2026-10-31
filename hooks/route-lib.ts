@@ -63,11 +63,13 @@ function effortOf(text: string, model: string): Effort {
   return model.includes('sonnet') && effort === 'max' ? 'xhigh' : effort
 }
 
-export function decideRoute(answers: Answers, contextTokens: number): Route | null {
+// `hasCodex`: the session has the codex-build skill; without it an OpenAI pick stays on Claude's general row.
+export function decideRoute(answers: Answers, contextTokens: number, hasCodex: boolean): Route | null {
   const chosen = ROUTING.find(row => row.id === answers.task?.choice)
   if (!chosen) return null
   const isSure = (answers.task?.confidence ?? 0) >= MIN_TASK_CONFIDENCE && chosen.confidence !== 'Low'
-  const row = isSure ? chosen : ROUTING[0]
+  const isReachable = hasCodex || (chosen.value || chosen.primary).startsWith('claude-')
+  const row = isSure && isReachable ? chosen : ROUTING[0]
   const isLong = (answers.long?.noul ?? 0) >= 0.5
 
   // R01 for the fewest tokens at the same quality: the value pick runs the task.
@@ -76,7 +78,7 @@ export function decideRoute(answers: Answers, contextTokens: number): Route | nu
   if (run.includes('haiku') && contextTokens >= HAIKU_MAX_TOKENS) run = SONNET
   const named = answers.skill?.choice
   const skill = named && named !== 'none' && (answers.skill?.probabilities?.[named] ?? 0) >= SKILL_MIN_PROBABILITY ? named : null
-  const head = `Jev: ${chosen.id} (${Math.round(100 * (answers.task?.confidence ?? 0))}%)${isSure ? '' : ' → general'}`
+  const head = `Jev: ${chosen.id} (${Math.round(100 * (answers.task?.confidence ?? 0))}%)${row === chosen ? '' : ' → general'}`
   const tail = skill ? ` · skill: ${skill}.` : '.'
 
   // An OpenAI pick goes to Codex on that model; Sonnet hands it off and brings the results back.

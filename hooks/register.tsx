@@ -183,17 +183,19 @@ async function routeWithJev($: EngineInterface, draft: string, conversation: str
   const home = ((await $.env.get('HOME').catch(() => undefined)) ?? '').replace(/\/$/, '')
   const key = String((await $.fs.read(`${home}/${KEY_PATH}`).catch(() => '')) ?? '').trim()
   if (key === '') return null
+  const commands = await $.command.list().catch(() => [])
   const response = await $.http.fetch(JEV_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'jev-latest',
       state: { prompt: draft, conversation: conversation.slice(-4000) },
-      questions: { ...JEV_QUESTIONS, skill: skillQuestion(skillCatalogue(await $.command.list().catch(() => []))) },
+      questions: { ...JEV_QUESTIONS, skill: skillQuestion(skillCatalogue(commands)) },
     }),
   })
   const tokens = (await $.session.usage().catch(() => undefined))?.context?.tokens ?? 0
-  return response.ok ? decideRoute(JSON.parse(response.text).answers, tokens) : null
+  const hasCodex = commands.some(command => command.name === 'codex-build')
+  return response.ok ? decideRoute(JSON.parse(response.text).answers, tokens, hasCodex) : null
 }
 
 type Outcome =

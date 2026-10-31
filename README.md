@@ -10,7 +10,7 @@ Press **Optimize** (or type `/optimize your rough prompt`) and it:
    - whether it's a **long task**;
    - which of your installed **skills** fits, if any.
 
-   Code then applies the table's rules: the best-value model runs the task; a long task **plans on the best-quality model and switches to the value model mid-task** for the remaining steps (one switch, so the cache is re-read once); OpenAI-only wins (e.g. security research, hard math) are handed to **OpenAI Codex** with results reported back into the same thread. The pick shows in a toast, e.g. `Jev: large_codebase_changes (99%) · long task: plans on Opus 5.5 (medium), then Sonnet 5.5 (xhigh) runs the steps.`
+   Code then applies the table's rules: the best-value model runs the task; a long task **plans on the best-quality model and switches to the value model mid-task** for the remaining steps (one switch, so the cache is re-read once); OpenAI-only wins (e.g. security research, hard math) are handed to **OpenAI Codex** with results reported back into the same thread. The hand-off needs the Codex CLI and a `codex-build` skill in your session; without them those tasks stay on Claude. The pick shows in a toast, e.g. `Jev: large_codebase_changes (99%) · long task: plans on Opus 5.5 (medium), then Sonnet 5.5 (xhigh) runs the steps.`
 3. **Saves credits on your whole setup**, automatically when a thread opens and again on every press:
    - adds deny rules so Claude never reads `node_modules`, build output, lockfiles, `.env` files and the like (undo in the Save credits pane);
    - compacts the thread once it passes half the context window or 150K tokens, keeping decisions, open tasks, paths, commands and errors;
