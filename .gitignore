@@ -1,0 +1,4 @@
+.harnesskit/
+.claude/
+.claude-plugin/types/
+node_modules/
