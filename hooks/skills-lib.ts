@@ -1,4 +1,4 @@
-import type { CommandInfo, SessionMessage } from 'claude-code'
+import type { CommandInfo, SessionMessage, ToolInfo } from 'claude-code'
 
 // Pure helpers for the skills features; everything that reaches `$` lives in register.tsx.
 
@@ -20,13 +20,16 @@ export const SAFE_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/
 // Plugin parts that change how every session behaves; a plugin with none only adds skills, commands or agents.
 const SESSION_WIDE_FIELDS = ['hooks', 'mcpServers', 'lspServers', 'outputStyles']
 const SESSION_WIDE_FILES = ['hooks', 'output-styles', '.mcp.json', '.lsp.json']
-const OWN_COMMANDS = new Set(['optimize', 'new-skills'])
+const OWN_COMMANDS = new Set(['optimize', 'optimize-rules', 'new-skills'])
 
 // How much of the conversation and the skill list the optimizer reads.
 const MAX_MESSAGES = 12
 const MESSAGE_CHARS = 1200
 const CONVERSATION_CHARS = 8000
-const MAX_SKILLS = 200
+const MAX_SKILLS = 400
+const MAX_SERVERS = 60
+// A server's tool names, cut here: room for about thirty.
+const SERVER_CHARS = 600
 
 export type Skill = { name: string; description: string }
 export type Json = Record<string, any>
@@ -59,6 +62,18 @@ export function skillCatalogue(commands: readonly CommandInfo[]): Skill[] {
   return skills.slice(0, MAX_SKILLS)
 }
 
+// The session's MCP servers, each with the tools it adds (`mcp__<server>__<tool>`), for the optimizer to name.
+// Claude Code's own tools are left out: it reaches for those unprompted.
+export function toolCatalogue(tools: readonly ToolInfo[]): Skill[] {
+  const servers = new Map<string, string[]>()
+  for (const tool of tools) {
+    const [, server, name] = (tool.mcp ? tool.name.match(/^mcp__(.+?)__(.+)$/) : null) ?? []
+    if (server && name) servers.set(server, [...(servers.get(server) ?? []), name])
+  }
+
+  return [...servers].slice(0, MAX_SERVERS).map(([name, names]) => ({ name, description: oneLine(names.join(', '), SERVER_CHARS) }))
+}
+
 // The latest messages with text, oldest first, within the optimizer's budget.
 export function conversationExcerpt(messages: readonly SessionMessage[]): string {
   const lines: string[] = []
@@ -75,9 +90,9 @@ export function conversationExcerpt(messages: readonly SessionMessage[]): string
   return lines.join('\n\n')
 }
 
-// What the optimizer reads: the draft, after the conversation, the skills to read it against and
-// the installed plugins that are switched off.
-export function optimizerPrompt(draft: string, conversation: string, skills: readonly Skill[], off: readonly Skill[] = []): string {
+// What the optimizer reads: the draft, after the conversation, the skills and MCP tools to read it
+// against and the installed plugins that are switched off.
+export function optimizerPrompt(draft: string, conversation: string, skills: readonly Skill[], off: readonly Skill[] = [], tools: readonly Skill[] = []): string {
   const list = (items: readonly Skill[]) => items.map(item => `- ${item.name}: ${item.description}`).join('\n')
   const parts: string[] = []
   if (conversation !== '') {
@@ -85,6 +100,9 @@ export function optimizerPrompt(draft: string, conversation: string, skills: rea
   }
   if (skills.length > 0) {
     parts.push(`<skills>\n${list(skills)}\n</skills>`)
+  }
+  if (tools.length > 0) {
+    parts.push(`<tools>\n${list(tools)}\n</tools>`)
   }
   if (off.length > 0) {
     parts.push(`<plugins_off>\n${list(off)}\n</plugins_off>`)

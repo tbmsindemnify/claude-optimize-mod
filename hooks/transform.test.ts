@@ -16,6 +16,7 @@ const BAND = {
   component: 'AbovePrompt' as const,
   props: {
     hasSurvey: false,
+    isCollapsed: false,
     isWorking: false,
     maxRows: 10,
     bodyColumns: 100,

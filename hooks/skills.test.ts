@@ -41,6 +41,7 @@ const BAND = {
   component: 'AbovePrompt' as const,
   props: {
     hasSurvey: false,
+    isCollapsed: false,
     isWorking: false,
     maxRows: 10,
     bodyColumns: 100,
@@ -273,7 +274,8 @@ test("once a day the repo's new skills are listed to download or leave out", asy
   await ui.unmount()
 })
 
-test('a day later the skills you picked and the installed plugins update, and nothing is asked again', async ($, on) => {
+// A simulated day of five-second timers runs close to the default five seconds.
+test('a day later the skills you picked and the installed plugins update, and nothing is asked again', { timeoutMs: 20_000 }, async ($, on) => {
   const world = machine(on, {
     web: { [REPO_SKILLS_URL]: JSON.stringify([{ name: 'webapp-testing', type: 'dir' }]) },
     store: { 'repo.chosen': ['webapp-testing'] },
