@@ -38,7 +38,9 @@ export type CreditReport = {
   // The daily checks.
   checkedAt: number
   servers: { name: string; where: string; tools: number; tokens: number }[]
-  plugins: { id: string; tokens: number }[]
+  // Idle plugins left on because they run hooks or servers, whose use no transcript shows; then the ones switched off.
+  plugins: { id: string; tokens: number; scope: string }[]
+  pluginsOff: { id: string; tokens: number; scope: string }[]
   hasRtk: boolean
   hasContextMode: boolean
   claudeMd: ClaudeMdProposal[]

@@ -14,8 +14,9 @@ Press **Optimize** (or type `/optimize your rough prompt`) and it:
 3. **Saves credits on your whole setup**, automatically when a thread opens and again on every press:
    - adds deny rules so Claude never reads `node_modules`, build output, lockfiles, `.env` files and the like (undo in the Save credits pane);
    - compacts the thread once it passes half the context window or 150K tokens, keeping decisions, open tasks, paths, commands and errors;
-   - once a day, flags MCP servers and plugins you haven't used, missing context-mode and RTK, and CLAUDE.md files over 200 lines (and offers to move sections out).
-4. Keeps your **skills up to date** from Anthropic's official marketplace and offers new ones from Anthropic's skills repo.
+   - once a day, switches off plugins that no chat has used in 14 days (those that only add skills, commands or agents; one press in the Save credits pane turns one back on), and switches one back on by itself when a prompt you optimize needs it;
+   - once a day, flags MCP servers you haven't used, idle plugins that run hooks or servers, missing context-mode and RTK, and CLAUDE.md files over 200 lines (and offers to move sections out).
+4. Keeps your **skills up to date** from Anthropic's official marketplace and offers new ones from Anthropic's skills repo. New skill plugins install switched off, so they cost nothing until a prompt needs one.
 
 Beside the button, a one-bar **cache meter** shows how warm the prompt cache is and how long it has left.
 

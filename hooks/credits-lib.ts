@@ -133,14 +133,19 @@ export function idleServers(
   return idle.sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
 }
 
-// Plugin names the transcripts show in use: a skill, a slash command, an agent or an MCP tool.
+// What the transcript search greps for, and ends with when it ran to the end.
+export const PLUGIN_USE = '("skill":"[a-z0-9-]+:|<command-name>/[a-z0-9-]+:|"subagent_type":"[a-z0-9-]+:|"name":"mcp__plugin_[a-z0-9-]+_)'
+export const SCANNED = 'scanned'
+
+// Plugin names the transcripts show in use: a skill, a slash command, an agent or an MCP tool call
+// (a tool's name alone is only its listing, which every chat carries).
 export function pluginsUsed(grepOutput: string): Set<string> {
   const used = new Set<string>()
   const patterns = [
     /"skill":"([a-z0-9-]+):/g,
     /<command-name>\/([a-z0-9-]+):/g,
     /"subagent_type":"([a-z0-9-]+):/g,
-    /mcp__plugin_([a-z0-9-]+)_/g,
+    /"name":"mcp__plugin_([a-z0-9-]+)_/g,
   ]
   for (const pattern of patterns) {
     for (const match of grepOutput.matchAll(pattern)) used.add(match[1] ?? '')
@@ -149,6 +154,18 @@ export function pluginsUsed(grepOutput: string): Set<string> {
 }
 
 export type IdlePlugin = { id: string; tokens: number }
+export type InstalledPlugin = { id: string; scope: string; path: string; installedAt: number; isOn: boolean }
+
+// The plugins `installed_plugins.json` lists: where each is installed, since when, and whether the settings turn it on.
+export function installedPlugins(installed: unknown, enabled: Readonly<Record<string, unknown>>): InstalledPlugin[] {
+  type Entry = { scope?: string; installPath?: string; installedAt?: string }
+  const plugins = (installed as { plugins?: Record<string, Entry[]> } | undefined)?.plugins ?? {}
+  return Object.entries(plugins).flatMap(([id, [entry]]) =>
+    entry?.installPath
+      ? [{ id, scope: entry.scope ?? 'user', path: entry.installPath, installedAt: Date.parse(entry.installedAt ?? '') || 0, isOn: enabled[id] === true }]
+      : [],
+  )
+}
 
 // Enabled plugins with no use in the window, costliest first: their skill listings and loaded tools.
 export function idlePlugins(

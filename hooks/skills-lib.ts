@@ -75,18 +75,29 @@ export function conversationExcerpt(messages: readonly SessionMessage[]): string
   return lines.join('\n\n')
 }
 
-// What the optimizer reads: the draft, after the conversation and the skills to read it against.
-export function optimizerPrompt(draft: string, conversation: string, skills: readonly Skill[]): string {
+// What the optimizer reads: the draft, after the conversation, the skills to read it against and
+// the installed plugins that are switched off.
+export function optimizerPrompt(draft: string, conversation: string, skills: readonly Skill[], off: readonly Skill[] = []): string {
+  const list = (items: readonly Skill[]) => items.map(item => `- ${item.name}: ${item.description}`).join('\n')
   const parts: string[] = []
   if (conversation !== '') {
     parts.push(`<conversation>\n${conversation}\n</conversation>`)
   }
   if (skills.length > 0) {
-    parts.push(`<skills>\n${skills.map(skill => `- ${skill.name}: ${skill.description}`).join('\n')}\n</skills>`)
+    parts.push(`<skills>\n${list(skills)}\n</skills>`)
+  }
+  if (off.length > 0) {
+    parts.push(`<plugins_off>\n${list(off)}\n</plugins_off>`)
   }
   parts.push(`<draft>\n${draft}\n</draft>`)
 
   return parts.join('\n\n')
+}
+
+// The switched-off plugins the optimizer asked for inside <enable_plugins> tags, of those offered.
+export function pluginsAsked<T extends { name: string }>(reply: string, offered: readonly T[]): T[] {
+  const asked = (reply.match(/<enable_plugins>([\s\S]*?)<\/enable_plugins>/)?.[1] ?? '').split(/[\s,]+/)
+  return offered.filter(plugin => asked.includes(plugin.name))
 }
 
 // Anthropic's own plugins in a marketplace manifest, each with its folder in the marketplace's copy;

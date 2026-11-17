@@ -71,6 +71,8 @@ function machine(
     store?: Record<string, unknown>
     hooksMtime?: () => number
     failAdd?: boolean
+    // What the search of every chat's transcript for plugin uses prints.
+    scan?: string
   } = {},
 ) {
   const files: Record<string, string> = {
@@ -133,7 +135,8 @@ function machine(
       }
       files[`${PLUGINS}/known_marketplaces.json`] = JSON.stringify({ 'claude-plugins-official': { installLocation: MARKET } })
     }
-    const stdout = command.startsWith('tar -tzf') ? 'skills-main/\nskills-main/skills/\n' : ''
+    const scan = command.includes('.claude*/projects') ? (options.scan ?? '') : ''
+    const stdout = command.startsWith('tar -tzf') ? 'skills-main/\nskills-main/skills/\n' : scan
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('http.fetch', (_, e) => {
@@ -206,6 +209,8 @@ test("the first sync adds Anthropic's marketplace and installs only its skill pl
   expect(commandsRun(world.ran, CLAUDE)).toEqual([
     `${CLAUDE} plugin marketplace add anthropics/claude-plugins-official`,
     `${CLAUDE} plugin install frontend-design@claude-plugins-official --scope user`,
+    // Installed switched off: a press of Optimize turns it on when a prompt needs it.
+    `${CLAUDE} plugin disable frontend-design@claude-plugins-official --scope user`,
     `${CLAUDE} plugin update code-review@claude-plugins-official`,
   ])
   expect(world.toasts[0]).toContain('frontend-design')
@@ -317,4 +322,79 @@ test('a sync that fails is not marked done, says why when you press Optimize, an
   await world.clock.advance(HOUR)
   const adds = commandsRun(world.ran, `${CLAUDE} plugin marketplace add`)
   expect(adds.length).toBe(3)
+})
+
+// --- Plugins: off when no chat uses them, on when a prompt needs one ---
+
+const SYNCED = { 'skills.syncedAt': 40 * DAY, 'skills.dailyAt': 40 * DAY }
+const installedAt = (day: number) => new Date(day * DAY).toISOString()
+
+test('a skills-only plugin no chat used in 14 days is switched off where it is installed; the rest stay on', async ($, on) => {
+  const world = machine(on, { now: 40 * DAY, store: SYNCED, scan: '"skill":"busy:run"\nscanned\n' })
+  world.files[`${PLUGINS}/installed_plugins.json`] = JSON.stringify({
+    plugins: {
+      'idle@m': [{ scope: 'user', installPath: '/p/idle', installedAt: installedAt(1) }],
+      'busy@m': [{ scope: 'user', installPath: '/p/busy', installedAt: installedAt(1) }],
+      'fresh@m': [{ scope: 'user', installPath: '/p/fresh', installedAt: installedAt(39) }],
+      'hooked@m': [{ scope: 'project', installPath: '/p/hooked', installedAt: installedAt(1) }],
+    },
+  })
+  world.dirs['/p/idle'] = [{ name: 'skills', kind: 'dir' }]
+  world.dirs['/p/hooked'] = [{ name: 'skills', kind: 'dir' }, { name: 'hooks', kind: 'dir' }]
+  on('session.cwd', () => ({ value: '/work' }))
+  on('settings.read', () => ({ value: { enabledPlugins: { 'idle@m': true, 'busy@m': true, 'fresh@m': true, 'hooked@m': true } } }))
+
+  await startSession($, world)
+
+  expect(commandsRun(world.ran, CLAUDE)).toEqual([`${CLAUDE} plugin disable idle@m --scope user`])
+  expect(world.toasts.join(' ')).toContain('Turned off 1 plugin no chat used in 14 days: idle.')
+  expect(world.store['plugins.since']).toEqual({ 'busy@m': DAY, 'fresh@m': 39 * DAY, 'hooked@m': DAY })
+  expect(world.opened).toContain('save-credits')
+})
+
+test('a search of the chats that was cut short switches nothing off', async ($, on) => {
+  const world = machine(on, { now: 40 * DAY, store: SYNCED, scan: '' })
+  world.files[`${PLUGINS}/installed_plugins.json`] = JSON.stringify({
+    plugins: { 'idle@m': [{ scope: 'user', installPath: '/p/idle', installedAt: installedAt(1) }] },
+  })
+  world.dirs['/p/idle'] = [{ name: 'skills', kind: 'dir' }]
+  on('session.cwd', () => ({ value: '/work' }))
+  on('settings.read', () => ({ value: { enabledPlugins: { 'idle@m': true } } }))
+
+  await startSession($, world)
+
+  expect(commandsRun(world.ran, CLAUDE)).toEqual([])
+})
+
+test('a prompt that needs a switched-off plugin gets it switched on', async ($, on) => {
+  const world = machine(on)
+  world.files[`${PLUGINS}/installed_plugins.json`] = JSON.stringify({
+    plugins: {
+      'commit-commands@m': [{ scope: 'user', installPath: '/p/cc' }],
+      'math@m': [{ scope: 'user', installPath: '/p/math' }],
+      'on@m': [{ scope: 'user', installPath: '/p/on' }],
+    },
+  })
+  world.files['/p/cc/.claude-plugin/plugin.json'] = JSON.stringify({ description: 'Commit, push and open pull requests' })
+  world.files['/p/math/.claude-plugin/plugin.json'] = JSON.stringify({ description: 'Solve competition math' })
+  world.files['/p/on/.claude-plugin/plugin.json'] = JSON.stringify({ description: 'Already on' })
+  on('settings.read', () => ({ value: { enabledPlugins: { 'commit-commands@m': false, 'on@m': true } } }))
+  const asked: string[] = []
+  const filled: string[] = []
+  on('model.complete', (_, e) => {
+    asked.push(e.prompt)
+    const text = '<optimized_prompt>Commit and open a PR.</optimized_prompt>\n<enable_plugins>commit-commands, made-up</enable_plugins>'
+    return { value: { isAnswered: true as const, text, usage: USAGE } }
+  })
+  on('prompt.fill', (_, e) => {
+    filled.push(e.text)
+    return { isFilled: true }
+  })
+
+  await $.command.run({ ...RUN, args: 'commit this and open a pr' })
+
+  expect(asked[0]).toContain('<plugins_off>\n- commit-commands: Commit, push and open pull requests\n- math: Solve competition math\n</plugins_off>')
+  expect(commandsRun(world.ran, CLAUDE)).toEqual([`${CLAUDE} plugin enable commit-commands@m --scope user`])
+  expect(filled).toEqual(['Commit and open a PR.'])
+  expect(world.toasts.join(' ')).toContain('Turned on commit-commands for this task')
 })

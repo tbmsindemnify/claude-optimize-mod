@@ -4,6 +4,7 @@ import {
   applyMoves,
   idlePlugins,
   idleServers,
+  installedPlugins,
   isWorthCompacting,
   movesFrom,
   pluginsUsed,
@@ -86,8 +87,24 @@ test('an MCP server with no call in the window is idle, with what its loaded too
   expect(idle).toEqual([{ name: 'jax', where: 'Claude Code (user)', tools: 2, tokens: 500 }])
 })
 
-test("a plugin nobody used here is idle, costliest first; one in use isn't", () => {
-  const used = pluginsUsed('"skill":"engineering:debug"\n<command-name>/sales:forecast\nmcp__plugin_figma_figma__')
+test('installed plugins carry their scope, folder, install date and whether the settings turn them on', () => {
+  const file = {
+    plugins: {
+      'a@m': [{ scope: 'project', installPath: '/p/a', installedAt: '1970-01-02T00:00:00.000Z' }],
+      'b@m': [{ installPath: '/p/b' }],
+      'c@m': [],
+    },
+  }
+
+  expect(installedPlugins(file, { 'a@m': true, 'b@m': false })).toEqual([
+    { id: 'a@m', scope: 'project', path: '/p/a', installedAt: 86_400_000, isOn: true },
+    { id: 'b@m', scope: 'user', path: '/p/b', installedAt: 0, isOn: false },
+  ])
+  expect(installedPlugins(undefined, {})).toEqual([])
+})
+
+test("a plugin no chat used is idle, costliest first; one in use isn't, and a tool's listing is not a use", () => {
+  const used = pluginsUsed('"skill":"engineering:debug"\n<command-name>/sales:forecast\n"name":"mcp__plugin_figma_figma__\n"mcp__plugin_render_render__deploy"')
   const skills = [
     { name: 'a', source: 'plugin', pluginName: 'twilio-developer-kit', tokens: 900 },
     { name: 'b', source: 'plugin', pluginName: 'render', tokens: 300 },
