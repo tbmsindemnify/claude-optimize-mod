@@ -1,0 +1,36 @@
+import type { EngineInterface, Hook, ToolCallResult } from 'claude-code'
+
+import { isLocalFirecrawl, localTwin } from './skills-lib'
+import type { Json } from './skills-lib'
+
+// The Firecrawl MCP server running on this machine, found when the thread opens.
+let local: string | undefined
+export const localFirecrawl = () => local
+
+async function json($: EngineInterface, path: string): Promise<Json | undefined> {
+  return JSON.parse(String(await $.fs.read(path).catch(() => '')) || 'null') ?? undefined
+}
+
+export async function findLocalFirecrawl($: EngineInterface) {
+  const home = ((await $.env.get('HOME').catch(() => undefined)) ?? '').replace(/\/$/, '')
+  const dir = (await $.session.cwd().catch(() => '')).replace(/\/$/, '')
+  const user = await json($, `${home}/.claude.json`).catch(() => undefined)
+  const project = dir ? await json($, `${dir}/.mcp.json`).catch(() => undefined) : undefined
+  const configs: Json = { ...user?.mcpServers, ...user?.projects?.[dir]?.mcpServers, ...project?.mcpServers }
+  local = Object.keys(configs).find(name => isLocalFirecrawl(configs[name]))
+}
+
+// A Firecrawl call goes to the copy on this machine, which costs no credits; where that fails, to the one called.
+type Args = Parameters<Hook<'tool.call'>>
+export async function firecrawlCall($: EngineInterface, e: Args[1], next: Args[2]): Promise<ToolCallResult> {
+  const twin = localTwin(e.tool, local)
+  if (!twin || !(await $.tool.list().catch(() => [])).some(tool => tool.name === twin)) return next(e)
+  const { tool: _tool, tool_use_id: _id, agentId: _agent, requestMeta: _meta, ...args } = e as Json
+  const result = await callTool($ as never, { ...args, tool: twin }).catch(() => undefined)
+  return result && !result.deny && !result.isError ? result : next(e)
+}
+
+// `$.tool.call` by a name the types may not list, typed loosely: checking it against every connected tool is too deep.
+async function callTool($: { tool: { call: (input: Json) => Promise<ToolCallResult> } }, input: Json): Promise<ToolCallResult> {
+  return $.tool.call(input)
+}

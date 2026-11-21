@@ -1,6 +1,6 @@
 {
   "name": "prompt-transform",
-  "version": "0.8.0",
-  "description": "An Optimize button above the prompt box (and /optimize) for Claude: it rewrites your prompt by Anthropic's prompting advice, which it re-reads daily to keep its rules current; picks the Claude model and effort for the task from a benchmark routing table, switching a long task from the planning model to a cheaper one mid-task; and names the skills and MCP tools the work needs. It also compacts a long thread, adds deny rules for files Claude never needs, switches off plugins no chat has used in 14 days and switches one on when a prompt needs it, and daily flags idle MCP servers, missing context-mode and RTK, and CLAUDE.md files over 200 lines; beside a one-bar meter of how warm the prompt cache is. It keeps Claude's skills up to date.",
+  "version": "0.9.0",
+  "description": "An Optimize button above the prompt box (and /optimize) for Claude: it rewrites your prompt by Anthropic's prompting advice, which it re-reads daily to keep its rules current; picks the Claude model and effort for the task from a benchmark routing table, switching a long task from the planning model to a cheaper one mid-task; and names the skills and MCP tools the work needs, sending web searches and scrapes to a Firecrawl on your own machine when you run one. It also compacts a long thread, adds deny rules for files Claude never needs, switches off plugins no chat has used in 14 days and switches one on when a prompt needs it, and daily flags idle MCP servers, missing context-mode and RTK, and CLAUDE.md files over 200 lines; beside a one-bar meter of how warm the prompt cache is. It keeps Claude's skills up to date.",
   "types": "./types/index.d.ts"
 }

@@ -29,6 +29,7 @@ import {
   withDenyRules,
 } from './credits-lib'
 import { DISTILL_SYSTEM, distillPrompt, GUIDANCE_SOURCES, guidanceFrom, hashOf } from './guidance-lib'
+import { findLocalFirecrawl, localFirecrawl } from './firecrawl'
 import { registerUsage, startUsage, usageRow } from './usage'
 import type { ConfiguredServer, DenyRule, InstalledPlugin } from './credits-lib'
 import {
@@ -248,7 +249,7 @@ async function rewrite($: EngineInterface, draft: string): Promise<Rewrite> {
   const conversation = conversationExcerpt(await $.session.messages().catch(() => []))
   const off = await offPlugins($).catch(() => [])
   const commands = await $.command.list().catch(() => [])
-  const tools = toolCatalogue(await $.tool.list().catch(() => []))
+  const tools = toolCatalogue(await $.tool.list().catch(() => []), localFirecrawl())
   const rules = (await savedGuidance($).catch(() => undefined))?.text ?? SHIPPED_RULES
   const [reply, jev] = await Promise.all([
     $.model.complete({
@@ -1298,6 +1299,7 @@ export const register: Register = on => {
     await startSkills($).catch(() => {})
     await startGuidance($).catch(() => {})
     await startUsage($)
+    await findLocalFirecrawl($).catch(() => {})
     // Tyler (2026-10-31): the deny rules and the daily idle checks run when a thread opens, not only on a press.
     void (async () => { await recordPress($, null, await addDenyRules($).catch(() => null)); await dailyChecks($) })().catch(() => {})
 

@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput, SessionRateLimit } from 'claude-code'
 
 import type { DayStats, Limit } from '../types'
+import { firecrawlCall } from './firecrawl'
 
 // The usage row under the Optimize band (Tyler, 2026-10-19): today's productivity score, the 5-hour
 // and weekly limits with when each resets, the model, and what's left of Fable 5.1.
@@ -100,7 +101,7 @@ export function registerUsage(on: On) {
   on('tool.call', async ($, e, next) => {
     if (e.tool === 'Edit' || e.tool === 'Write' || e.tool === 'NotebookEdit') await bump($, 'edits')
     else if (e.tool === 'Bash' && /\bgit\b[^|;&]*\bcommit\b/.test(e.command)) await bump($, 'commits')
-    return next(e)
+    return firecrawlCall($, e, next)
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {

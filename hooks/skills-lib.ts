@@ -62,12 +62,25 @@ export function skillCatalogue(commands: readonly CommandInfo[]): Skill[] {
   return skills.slice(0, MAX_SKILLS)
 }
 
+// A Firecrawl MCP server pointed at this machine (FIRECRAWL_API_URL on localhost), whose calls cost no credits.
+export const isLocalFirecrawl = (config: Json | undefined) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(config?.env?.FIRECRAWL_API_URL ?? '')
+
+// The local Firecrawl's own tool for a call to another Firecrawl (`mcp__firecrawl__firecrawl_search` →
+// `mcp__firecrawl-local__firecrawl_search`); undefined for any other tool, or with no local server.
+export function localTwin(tool: string, local: string | undefined): string | undefined {
+  const [, server, name] = tool.match(/^mcp__(.+?)__(firecrawl_\w+)$/) ?? []
+  return local && name && server !== local ? `mcp__${local}__${name}` : undefined
+}
+
 // The session's MCP servers, each with the tools it adds (`mcp__<server>__<tool>`), for the optimizer to name.
-// Claude Code's own tools are left out: it reaches for those unprompted.
-export function toolCatalogue(tools: readonly ToolInfo[]): Skill[] {
+// Claude Code's own tools are left out: it reaches for those unprompted. So is a Firecrawl tool the local one also has.
+export function toolCatalogue(tools: readonly ToolInfo[], local?: string): Skill[] {
   const servers = new Map<string, string[]>()
+  const names = new Set(tools.map(tool => tool.name))
   for (const tool of tools) {
     const [, server, name] = (tool.mcp ? tool.name.match(/^mcp__(.+?)__(.+)$/) : null) ?? []
+    if (names.has(localTwin(tool.name, local) ?? '')) continue
     if (server && name) servers.set(server, [...(servers.get(server) ?? []), name])
   }
 
