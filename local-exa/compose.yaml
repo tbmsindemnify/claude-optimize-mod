@@ -1,0 +1,10 @@
+# A local stand-in for Exa's search API on http://127.0.0.1:3303 (see the README): `docker compose up -d`.
+# It shares the computer's network so it reaches a SearXNG that listens on 127.0.0.1, and listens there itself.
+services:
+  exa-local:
+    build: .
+    restart: always
+    network_mode: host
+    environment:
+      SEARXNG_URL: ${SEARXNG_URL:-http://127.0.0.1:8888}
+      PORT: ${PORT:-3303}

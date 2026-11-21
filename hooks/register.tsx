@@ -29,7 +29,7 @@ import {
   withDenyRules,
 } from './credits-lib'
 import { DISTILL_SYSTEM, distillPrompt, GUIDANCE_SOURCES, guidanceFrom, hashOf } from './guidance-lib'
-import { findLocalFirecrawl, localFirecrawl } from './firecrawl'
+import { findLocalFirecrawl, localFirecrawl, localFirecrawlUrl } from './firecrawl'
 import { registerUsage, startUsage, usageRow } from './usage'
 import type { ConfiguredServer, DenyRule, InstalledPlugin } from './credits-lib'
 import {
@@ -60,6 +60,7 @@ import {
 import type { Json, Skill } from './skills-lib'
 import { decideRoute, JEV_QUESTIONS, JEV_URL, KEY_PATH, ownAnswers, ROUTE_TTL_MS, skillQuestion, TASK_LIST, withRoute } from './route-lib'
 import type { Answers, Route } from './route-lib'
+import { enginesFor, hostedInstead, SEARCH_TOOLS, searchBody, searchResult } from './search-lib'
 
 const MODEL = 'sonnet'
 
@@ -1285,6 +1286,27 @@ export const register: Register = on => {
   })
 
   registerUsage(on)
+
+  // Web searches that are no Firecrawl call go to the search engines on this computer: the local Firecrawl
+  // and the Exa stand-in whose address is set. When none has results the called tool runs as usual.
+  on('tool.call', { tool: SEARCH_TOOLS }, async ($, e, next) => {
+    const { tool, tool_use_id, agentId, requestMeta, consent, ...args } = e as Record<string, any>
+    const started = await $.clock.now()
+    const urls = { Firecrawl: localFirecrawlUrl(), Exa: await $.env.get('OPTIMIZE_EXA_URL').catch(() => undefined) }
+    const silent: string[] = []
+    for (const engine of enginesFor(tool)) {
+      const url = urls[engine.name]?.replace(/\/$/, '')
+      if (!url) continue
+      const reply = await $.http
+        .fetch(url + engine.path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(searchBody(engine, tool, args)) })
+        .catch(() => undefined)
+      const result = reply?.ok ? searchResult(engine, tool, args.query, tool_use_id, reply.text, ((await $.clock.now()) - started) / 1000) : undefined
+      if (result !== undefined) return { result }
+      silent.push(`${engine.name} at ${url}`)
+    }
+    const ran = await next(e)
+    return silent.length === 0 ? ran : hostedInstead(ran, silent.join(' and '), tool)
+  }).catch(($, e, next) => next(e))
 
   on('session.start', async ($, e, next) => {
     await update($, isBusy, () => false)

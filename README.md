@@ -8,7 +8,7 @@ Press **Optimize** (or type `/optimize your rough prompt`) and it:
 2. **Picks the Claude model and effort for the task.** The same rewrite call says what kind of task the prompt is (25 task types from a benchmark-backed routing table: scoped bug fix, large codebase change, knowledge work, hard math…) and whether it's a long task. Code then applies the table's rules: the best-value Claude model runs the task (Haiku 5.5, Sonnet 5.5, Opus 5.5 or Fable 5.2), and a long task **plans on the stronger model and switches to the value model mid-task** for the remaining steps (one switch, so the cache is re-read once). The pick shows with the rewrite, e.g. `Claude: large_codebase_changes · long task: plans on Opus 5.5 (medium), then Sonnet 5.5 (xhigh) runs the steps.` It needs no key and no extra model call.
 3. **Names the right tools and skills.** The rewrite reads your installed skills and the MCP servers connected to the session (web search, databases, email, browsers…) and names the one the work needs, e.g. `Use execute_sql to count them, changing nothing`, so Claude Code calls it instead of working without it. The skill that fits is added as `Use the pptx skill.`, the picks show beside the model (`… · Sonnet 5.5 · medium effort · skill: pptx` or `· tools: firecrawl_search`), and a switched-off plugin the prompt needs is switched on.
 4. **Keeps its prompting rules current, daily.** Once a day the mod reads Anthropic's prompting pages ([Claude Code best practices](https://code.claude.com/docs/en/best-practices) and [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)) and, when they have changed, has Claude bring the rewrite's rules up to date with them. `/optimize-rules` shows the rules in use and their date; `/optimize-rules update` checks now. It runs on your own computer on your Claude plan: no key, no server.
-5. **Runs web searches on your own Firecrawl, free.** When a [self-hosted Firecrawl](https://docs.firecrawl.dev/contributing/self-host) is connected beside the hosted one, every Firecrawl call (search, scrape, map, crawl…) goes to the copy on your machine, optimized prompt or not, and the rewrite names its tools. Only when the local call fails (a site that blocks it, a tool it lacks) does the call go on to the hosted Firecrawl. See [Free web search on your own machine](#free-web-search-on-your-own-machine).
+5. **Runs web searches on your own Firecrawl, free.** When a [self-hosted Firecrawl](https://docs.firecrawl.dev/contributing/self-host) is connected beside the hosted one, every Firecrawl call (search, scrape, map, crawl…) goes to the copy on your machine, optimized prompt or not, and the rewrite names its tools. Only when the local call fails (a site that blocks it, a tool it lacks) does the call go on to the hosted Firecrawl. Claude Code's built-in WebSearch goes to your Firecrawl too, and to a local stand-in for Exa if you run the one in this repo. See [Free web search on your own machine](#free-web-search-on-your-own-machine).
 6. **Saves credits on your whole setup**, automatically when a thread opens and again on every press:
    - adds deny rules so Claude never reads `node_modules`, build output, lockfiles, `.env` files and the like (undo in the Save credits pane);
    - compacts the thread once it passes half the context window or 150K tokens, keeping decisions, open tasks, paths, commands and errors;
@@ -57,6 +57,18 @@ claude mcp add firecrawl-local -s user -e FIRECRAWL_API_URL=http://127.0.0.1:300
 
 Use the port your Firecrawl listens on. Any MCP server whose `FIRECRAWL_API_URL` is on `localhost` or `127.0.0.1` counts as local; the mod finds it when a thread opens. Keep the hosted Firecrawl connected too, if you have it: it is the fallback for sites that block the local one.
 
+Claude Code's built-in `WebSearch` goes to that Firecrawl too, so a plain "search the web" prompt stays on your machine.
+
+**A local Exa.** Exa itself is hosted only, so `local-exa/` in this repo is a small stand-in that answers Exa's `POST /search`: it finds pages through your own [SearXNG](https://docs.searxng.org) (with the `json` format switched on) and re-orders them by meaning with a small embedding model on the CPU. Start it with `cd local-exa && docker compose up -d` (Linux; elsewhere run `server.py` with `fastembed` installed). It listens on `127.0.0.1:3303`, `SEARXNG_URL` says where SearXNG is (default `http://127.0.0.1:8888`), and `docker compose logs` shows a line for each search. Its pages are SearXNG's, not Exa's index, and it reads `query`, `numResults`, `includeDomains`, `excludeDomains` and `contents.text`. Tell the mod where it is with `"OPTIMIZE_EXA_URL": "http://127.0.0.1:3303"` in the `env` of `~/.claude/settings.json`; any server that answers Exa's `POST /search` works there.
+
+| The call | Goes to |
+|---|---|
+| a hosted Firecrawl tool (search, scrape, map, crawl…) | the same tool on the local Firecrawl |
+| Claude Code's built-in `WebSearch` | the local Firecrawl, then the local Exa |
+| a hosted Exa's `web_search_exa` | the local Exa |
+
+When nothing local has an answer (it is down, or finds nothing), the tool that was called runs as usual and Claude says so in its reply.
+
 ### Let Jev judge the task (optional)
 
 Without a key the rewrite itself names the task type and the skill. With a [TypeSafe](https://docs.typesafe.ai) key, Jev (TypeSafe's typed-judgment model) makes that judgment instead, in one small request beside the rewrite, and the pick reads `Jev: bug_fix_scoped (83%) · …`:
@@ -92,6 +104,8 @@ Rules the code applies on top of the table: the value pick runs the task; a long
 | `hooks/route-table.ts` | Generated routing table |
 | `hooks/firecrawl.ts` | Sends Firecrawl calls to the local copy, with the hosted one as fallback |
 | `hooks/credits-lib.ts`, `hooks/skills-lib.ts` | Pure helpers for the credit savers and skills |
+| `hooks/search-lib.ts` | Which local search engine answers a web search, and in what shape (pure) |
+| `local-exa/` | The local stand-in for Exa's search API: `server.py`, its Dockerfile and compose file |
 | `hooks/*.tsx` | The button, cache meter and usage row |
 | `scripts/sync-routing.py` | Refreshes the routing table from the sheet |
 

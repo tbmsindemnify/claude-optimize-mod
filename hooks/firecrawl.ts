@@ -1,11 +1,14 @@
 import type { EngineInterface, Hook, ToolCallResult } from 'claude-code'
 
+import { hostedInstead } from './search-lib'
 import { isLocalFirecrawl, localTwin } from './skills-lib'
 import type { Json } from './skills-lib'
 
-// The Firecrawl MCP server running on this machine, found when the thread opens.
+// The Firecrawl MCP server running on this machine and its address, found when the thread opens.
 let local: string | undefined
+let url: string | undefined
 export const localFirecrawl = () => local
+export const localFirecrawlUrl = () => url
 
 async function json($: EngineInterface, path: string): Promise<Json | undefined> {
   return JSON.parse(String(await $.fs.read(path).catch(() => '')) || 'null') ?? undefined
@@ -23,6 +26,7 @@ export async function findLocalFirecrawl($: EngineInterface) {
   }
   if (dir) Object.assign(configs, (await json($, `${dir}/.mcp.json`).catch(() => undefined))?.mcpServers)
   local = Object.keys(configs).find(name => isLocalFirecrawl(configs[name]))
+  url = local && configs[local].env.FIRECRAWL_API_URL
 }
 
 // A Firecrawl call goes to the copy on this machine, which costs no credits; where that fails, to the one called.
@@ -32,7 +36,7 @@ export async function firecrawlCall($: EngineInterface, e: Args[1], next: Args[2
   if (!twin || !(await $.tool.list().catch(() => [])).some(tool => tool.name === twin)) return next(e)
   const { tool: _tool, tool_use_id: _id, agentId: _agent, requestMeta: _meta, ...args } = e as Json
   const result = await callTool($ as never, { ...args, tool: twin }).catch(() => undefined)
-  return result && !result.deny && !result.isError ? result : next(e)
+  return result && !result.deny && !result.isError ? result : hostedInstead(await next(e), 'Firecrawl', e.tool)
 }
 
 // `$.tool.call` by a name the types may not list, typed loosely: checking it against every connected tool is too deep.
