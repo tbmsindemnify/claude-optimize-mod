@@ -14,9 +14,14 @@ async function json($: EngineInterface, path: string): Promise<Json | undefined>
 export async function findLocalFirecrawl($: EngineInterface) {
   const home = ((await $.env.get('HOME').catch(() => undefined)) ?? '').replace(/\/$/, '')
   const dir = (await $.session.cwd().catch(() => '')).replace(/\/$/, '')
-  const user = await json($, `${home}/.claude.json`).catch(() => undefined)
-  const project = dir ? await json($, `${dir}/.mcp.json`).catch(() => undefined) : undefined
-  const configs: Json = { ...user?.mcpServers, ...user?.projects?.[dir]?.mcpServers, ...project?.mcpServers }
+  // Claude Code keeps its config in ~/.claude.json, or in .config.json inside its config folder where that exists.
+  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR').catch(() => undefined)) ?? `${home}/.claude`
+  const configs: Json = {}
+  for (const path of [`${home}/.claude.json`, `${configDir}/.config.json`]) {
+    const user = await json($, path).catch(() => undefined)
+    Object.assign(configs, user?.mcpServers, user?.projects?.[dir]?.mcpServers)
+  }
+  if (dir) Object.assign(configs, (await json($, `${dir}/.mcp.json`).catch(() => undefined))?.mcpServers)
   local = Object.keys(configs).find(name => isLocalFirecrawl(configs[name]))
 }
 

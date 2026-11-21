@@ -38,7 +38,7 @@ async function opened($: Engine, on: On, local: ToolCallResult) {
   const calls: string[] = []
   mock.clock(on)
   mock.env(on, { HOME: '/home/dev' })
-  on('fs.read', (_, e) => ({ value: e.path === '/home/dev/.claude.json' ? JSON.stringify({ mcpServers: { 'firecrawl-local': LOCAL } }) : '' }))
+  on('fs.read', (_, e) => ({ value: e.path === '/home/dev/.claude/.config.json' ? JSON.stringify({ mcpServers: { 'firecrawl-local': LOCAL } }) : '' }))
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('tool.list', () => ({ value: TOOLS }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
