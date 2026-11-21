@@ -61,3 +61,13 @@ export function searchResult(engine: Engine, tool: string, query: string, toolUs
 // The called tool's own answer where nothing local had one, with a note for Claude to say so.
 export const hostedInstead = (ran: ToolCallResult, local: string, tool: string): ToolCallResult =>
   ran.deny !== undefined ? ran : { ...ran, context: [...(ran.context ?? []), `The local ${local} had no answer, so this call ran on ${tool} instead. Tell the user so.`] }
+
+// A Firecrawl search reply whose every result list is empty.
+export function foundNothing(text: string | undefined): boolean {
+  try {
+    const lists = Object.values(JSON.parse(text ?? '').data ?? {})
+    return lists.length > 0 && lists.every(list => Array.isArray(list) && list.length === 0)
+  } catch {
+    return false
+  }
+}

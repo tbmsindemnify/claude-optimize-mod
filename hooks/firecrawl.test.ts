@@ -68,6 +68,14 @@ test('where the local one fails, the call goes on to the cloud', async ($, on) =
   expect(calls).toEqual(['mcp__firecrawl-local__firecrawl_search', 'mcp__firecrawl__firecrawl_search'])
 })
 
+test('a local search that finds nothing goes on to the cloud, with a note for Claude to say so', async ($, on) => {
+  const calls = await opened($, on, { result: 'none', text: '{"success":true,"data":{"web":[]}}' } as ToolCallResult)
+  const reply = await call($, 'mcp__firecrawl__firecrawl_search', { query: 'insurance code 542', categories: ['gov'] })
+  expect(reply.result).toBe('cloud')
+  expect(reply.context).toEqual(['The local Firecrawl had no answer, so this call ran on mcp__firecrawl__firecrawl_search instead. Tell the user so.'])
+  expect(calls).toEqual(['mcp__firecrawl-local__firecrawl_search', 'mcp__firecrawl__firecrawl_search'])
+})
+
 test('a tool the local one lacks goes straight to the cloud', async ($, on) => {
   const calls = await opened($, on, { result: 'local' } as ToolCallResult)
   await call($, 'mcp__firecrawl__firecrawl_extract', { prompt: 'x' })

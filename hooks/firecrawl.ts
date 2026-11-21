@@ -1,6 +1,6 @@
 import type { EngineInterface, Hook, ToolCallResult } from 'claude-code'
 
-import { hostedInstead } from './search-lib'
+import { foundNothing, hostedInstead } from './search-lib'
 import { isLocalFirecrawl, localTwin } from './skills-lib'
 import type { Json } from './skills-lib'
 
@@ -29,14 +29,16 @@ export async function findLocalFirecrawl($: EngineInterface) {
   url = local && configs[local].env.FIRECRAWL_API_URL
 }
 
-// A Firecrawl call goes to the copy on this machine, which costs no credits; where that fails, to the one called.
+// A Firecrawl call goes to the copy on this machine, which costs no credits; where that fails, or a search
+// there finds nothing (it lacks the hosted service's own indexes), to the one called.
 type Args = Parameters<Hook<'tool.call'>>
 export async function firecrawlCall($: EngineInterface, e: Args[1], next: Args[2]): Promise<ToolCallResult> {
   const twin = localTwin(e.tool, local)
   if (!twin || !(await $.tool.list().catch(() => [])).some(tool => tool.name === twin)) return next(e)
   const { tool: _tool, tool_use_id: _id, agentId: _agent, requestMeta: _meta, ...args } = e as Json
   const result = await callTool($ as never, { ...args, tool: twin }).catch(() => undefined)
-  return result && !result.deny && !result.isError ? result : hostedInstead(await next(e), 'Firecrawl', e.tool)
+  const hasAnswer = result && !result.deny && !result.isError && !(/_search$/.test(e.tool) && foundNothing(result.text))
+  return hasAnswer ? result : hostedInstead(await next(e), 'Firecrawl', e.tool)
 }
 
 // `$.tool.call` by a name the types may not list, typed loosely: checking it against every connected tool is too deep.
