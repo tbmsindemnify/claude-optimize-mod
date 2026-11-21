@@ -25,6 +25,8 @@ At the prompt of a Claude Code terminal session:
 /plugin install prompt-transform --marketplace tbmsindemnify/claude-optimize-mod
 ```
 
+Answer `y` to add the marketplace, then pick a scope. From a shell: `claude plugin install prompt-transform --marketplace tbmsindemnify/claude-optimize-mod`. In the desktop app: click **+** next to the prompt box → **Plugins** → **Add marketplace** `tbmsindemnify/claude-optimize-mod` → **Add plugin**.
+
 Or from a folder you keep, to change the code yourself:
 
 ```bash
