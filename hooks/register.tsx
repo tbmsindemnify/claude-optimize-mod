@@ -921,7 +921,8 @@ async function updateGuidance($: EngineInterface, isForced = false): Promise<str
       pages.push({ url, text: response.text })
     }
     const saved = await savedGuidance($)
-    const hash = hashOf(pages.map(page => page.text).join('\n'))
+    // The distiller's own instructions count too, so changing them brings the rules up to date again.
+    const hash = hashOf([DISTILL_SYSTEM, ...pages.map(page => page.text)].join('\n'))
     const reply =
       saved?.hash === hash
         ? null
