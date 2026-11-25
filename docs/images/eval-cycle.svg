@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="920" height="300" rx="16" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#55524C"/>
+    </marker>
+  </defs>
+  <text x="460" y="38" text-anchor="middle" font-size="19" font-weight="700" fill="#2B2A27">Define "done", then test against it</text>
+  <g font-size="14" font-weight="600" text-anchor="middle">
+    <rect x="20" y="80" width="150" height="70" rx="12" fill="#FFFFFF" stroke="#9B1B30" stroke-width="2"/>
+    <text x="95" y="110" fill="#9B1B30">1 Success</text><text x="95" y="130" fill="#9B1B30">criteria</text>
+    <rect x="200" y="80" width="150" height="70" rx="12" fill="#FFFFFF" stroke="#B5470F" stroke-width="2"/>
+    <text x="275" y="110" fill="#B5470F">2 Test cases</text><text x="275" y="130" fill="#B5470F">+ edge cases</text>
+    <rect x="380" y="80" width="150" height="70" rx="12" fill="#FFFFFF" stroke="#1E7B34" stroke-width="2"/>
+    <text x="455" y="110" fill="#1E7B34">3 First</text><text x="455" y="130" fill="#1E7B34">prompt</text>
+    <rect x="560" y="80" width="150" height="70" rx="12" fill="#FFFFFF" stroke="#1A4F8B" stroke-width="2"/>
+    <text x="635" y="110" fill="#1A4F8B">4 Run evals,</text><text x="635" y="130" fill="#1A4F8B">refine</text>
+    <rect x="740" y="80" width="160" height="70" rx="12" fill="#FFFFFF" stroke="#7D3C98" stroke-width="2"/>
+    <text x="820" y="110" fill="#7D3C98">5 Final check,</text><text x="820" y="130" fill="#7D3C98">ship</text>
+  </g>
+  <g stroke="#55524C" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M170 115H198"/><path d="M350 115H378"/><path d="M530 115H558"/><path d="M710 115H738"/>
+    <path d="M635 150V185H455V152"/>
+  </g>
+  <text x="545" y="203" text-anchor="middle" font-size="13" fill="#55524C">repeat until the numbers pass</text>
+  <g font-size="13" fill="#55524C" text-anchor="middle">
+    <text x="460" y="248">Specific, measurable, achievable, relevant. Grade by code first (exact match, string match),</text>
+    <text x="460" y="268">then by a model with a clear rubric; people only when nothing else can judge it.</text>
+  </g>
+</svg>

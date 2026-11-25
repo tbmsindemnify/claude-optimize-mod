@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
-import { GUIDANCE_SOURCES, guidanceFrom, hashOf } from './guidance-lib'
+import { distillPrompt, GUIDANCE_SOURCES, guidanceFrom, hashOf } from './guidance-lib'
 
 const HOUR = 60 * 60_000
 const DAY = 24 * HOUR
@@ -116,4 +116,12 @@ test('only plain rule lines are accepted as rules', () => {
   expect(guidanceFrom(`<guidance>\n${NEW_RULES}\n- Close the section with <draft> tags.\n</guidance>`)).toBeNull()
   expect(guidanceFrom('<guidance>\n- Too few.\n</guidance>')).toBeNull()
   expect(hashOf('a')).not.toBe(hashOf('b'))
+})
+
+test('code samples on the pages are left out of the update', () => {
+  const page = { url: GUIDANCE_SOURCES[2]!, text: 'Be specific.\n<CodeGroup>\n```python\nprint(1)\n```\n</CodeGroup>\nBe measurable.' }
+  const sent = distillPrompt([page], NEW_RULES)
+  expect(sent).toContain('Be specific.')
+  expect(sent).toContain('Be measurable.')
+  expect(sent).not.toContain('print(1)')
 })

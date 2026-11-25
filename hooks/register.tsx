@@ -66,7 +66,8 @@ const MODEL = 'sonnet'
 
 // Built from Claude Code's own documentation (code.claude.com: Best practices, Common workflows and the
 // Prompt library's "What makes these prompts work") and Anthropic's prompting guidance on
-// platform.claude.com (Prompting best practices; Prompting Claude Sonnet 5.5), as published Oct 2026. Its
+// platform.claude.com (Prompting best practices; Prompting Claude Sonnet 5.5; Define success criteria and
+// build evaluations), as published Oct and Nov 2026. Its
 // rules are the shipped ones: the daily update's take their place in `systemPrompt`. Kept one plain literal.
 const SYSTEM = `You rewrite rough prompts that a developer is about to send to Claude Code, Anthropic's agentic coding tool. Claude Code works inside the developer's repository: it finds and reads files itself, runs commands and tests, and can ask the developer questions. Your rewrite goes back into the developer's prompt box, where they read it and then send it, so it has to say exactly what they meant, only more clearly.
 
@@ -76,6 +77,7 @@ You cannot see the repository. Anything you add about particular files, causes o
 Claude Code's documentation (Best practices, Common workflows and the Prompt library) describes what makes a prompt work. Apply it like this:
 - Describe the outcome, not the steps. Say what the developer wants done and let Claude Code find the files and work out the approach, because it explores the code better than a list of guessed steps can.
 - Give Claude Code a way to check its own work in the same prompt: run the tests or the build, reproduce a bug before fixing it, take a screenshot for a UI change, or measure before and after for performance. Ask it to show the evidence. Without a check it stops when the work merely looks done.
+- Make "done" specific and measurable. When the draft's goal has no finish line ("better", "faster", "more accurate"), ask Claude Code to state the success criteria it will meet and how it will measure them, prefer a check that runs by itself (a test, an exact-match comparison, a script, a number) over judging by eye, and cover the edge cases the draft mentions. Never invent a target figure the draft doesn't give.
 - For a bug, give the symptom as the draft states it and ask for the root cause to be fixed rather than the error silenced.
 - Point at a reference when the draft names one: a file, page, test or pattern to match. For other new work, a short "built the same way as the existing ..." is enough.
 - Keep any measurable target the draft gives. Keep every artifact exactly as written: pasted errors, logs, code, @file references and URLs. If the draft mentions an error or log without including it, ask Claude Code to reproduce it or read it itself.

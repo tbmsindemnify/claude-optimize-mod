@@ -2,12 +2,14 @@
 
 One button above Claude Code's prompt box that makes every prompt cheaper and better.
 
+![The Optimize button above the prompt box](docs/images/optimize-button.png)
+
 Press **Optimize** (or type `/optimize your rough prompt`) and it:
 
-1. **Rewrites your prompt** the way Anthropic's own docs recommend: clear outcome, a way to check the work, the right amount of planning, nothing invented. The rewrite lands back in your prompt box for you to read and send.
+1. **Rewrites your prompt** the way Anthropic's own docs recommend: clear outcome, a specific and measurable finish line with a way to check the work ([success criteria and evals](docs/success-criteria-and-evals.md)), the right amount of planning, nothing invented. The rewrite lands back in your prompt box for you to read and send.
 2. **Picks the Claude model and effort for the task.** The same rewrite call says what kind of task the prompt is (25 task types from a benchmark-backed routing table: scoped bug fix, large codebase change, knowledge work, hard math…) and whether it's a long task. Code then applies the table's rules: the best-value Claude model runs the task (Haiku 5.5, Sonnet 5.5, Opus 5.5 or Fable 5.2), and a long task **plans on the stronger model and switches to the value model mid-task** for the remaining steps (one switch, so the cache is re-read once). The pick shows with the rewrite, e.g. `Claude: large_codebase_changes · long task: plans on Opus 5.5 (medium), then Sonnet 5.5 (xhigh) runs the steps.` It needs no key and no extra model call.
 3. **Names the right tools and skills.** The rewrite reads your installed skills and the MCP servers connected to the session (web search, databases, email, browsers…) and names the one the work needs, e.g. `Use execute_sql to count them, changing nothing`, so Claude Code calls it instead of working without it. The skill that fits is added as `Use the pptx skill.`, the picks show beside the model (`… · Sonnet 5.5 · medium effort · skill: pptx` or `· tools: firecrawl_search`), and a switched-off plugin the prompt needs is switched on.
-4. **Keeps its prompting rules current, daily.** Once a day the mod reads Anthropic's prompting pages ([Claude Code best practices](https://code.claude.com/docs/en/best-practices) and [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)) and, when they have changed, has Claude bring the rewrite's rules up to date with them. `/optimize-rules` shows the rules in use and their date; `/optimize-rules update` checks now. It runs on your own computer on your Claude plan: no key, no server.
+4. **Keeps its prompting rules current, daily.** Once a day the mod reads Anthropic's prompting pages ([Claude Code best practices](https://code.claude.com/docs/en/best-practices) and [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) and [Define success criteria and build evaluations](https://platform.claude.com/docs/en/test-and-evaluate/develop-tests)) and, when they have changed, has Claude bring the rewrite's rules up to date with them. `/optimize-rules` shows the rules in use and their date; `/optimize-rules update` checks now. It runs on your own computer on your Claude plan: no key, no server.
 5. **Runs web searches on your own Firecrawl, free.** When a [self-hosted Firecrawl](https://docs.firecrawl.dev/contributing/self-host) is connected beside the hosted one, every Firecrawl call (search, scrape, map, crawl…) goes to the copy on your machine, optimized prompt or not, and the rewrite names its tools. Only when the local call fails (a site that blocks it, a tool it lacks) or a local search finds nothing (the hosted service's own indexes) does the call go on to the hosted Firecrawl. Claude Code's built-in WebSearch goes to your Firecrawl too, and to a local stand-in for Exa if you run the one in this repo. See [Free web search on your own machine](#free-web-search-on-your-own-machine).
 6. **Saves credits on your whole setup**, automatically when a thread opens and again on every press:
    - adds deny rules so Claude never reads `node_modules`, build output, lockfiles, `.env` files and the like (undo in the Save credits pane);
@@ -108,6 +110,7 @@ Rules the code applies on top of the table: the value pick runs the task; a long
 | `local-exa/` | The local stand-in for Exa's search API: `server.py`, its Dockerfile and compose file |
 | `hooks/*.tsx` | The button, cache meter and usage row |
 | `scripts/sync-routing.py` | Refreshes the routing table from the sheet |
+| `docs/` | [Success criteria and evals](docs/success-criteria-and-evals.md), and the README's images |
 
 ## License
 

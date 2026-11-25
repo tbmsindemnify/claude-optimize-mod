@@ -1,10 +1,12 @@
 // The prompting rules the rewrite follows, and the daily update that keeps them current with Anthropic's
 // documentation. Pure helpers; the fetch, the model call and the store live in register.tsx.
 
-// Anthropic's prompting advice: Claude Code's best practices, and the prompting best practices for Claude's models.
+// Anthropic's prompting advice: Claude Code's best practices, the prompting best practices for Claude's models,
+// and defining success criteria and evals (what "done" means and how to check it).
 export const GUIDANCE_SOURCES = [
   'https://code.claude.com/docs/en/best-practices.md',
   'https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices.md',
+  'https://platform.claude.com/docs/en/test-and-evaluate/develop-tests.md',
 ]
 
 export const DISTILL_SYSTEM = `You maintain the rules of a tool that rewrites a rough prompt a developer is about to send to Claude Code, Anthropic's agentic coding tool. The rules tell the rewriter how to word that one prompt. The rewriter sees the draft and the recent conversation, never the repository.
@@ -15,9 +17,10 @@ A rule is one line that starts with "- ", written to the rewriter in the imperat
 
 Write the rules inside <guidance> tags, with nothing else inside them.`
 
-// What the update sends: the pages, then the rules to bring up to date.
+// What the update sends: the pages, then the rules to bring up to date. SDK code samples in every language
+// (<CodeGroup>) are cut: they say nothing about wording a prompt and are most of the evals page.
 export function distillPrompt(pages: readonly { url: string; text: string }[], current: string): string {
-  return `${pages.map(page => `<page url="${page.url}">\n${page.text}\n</page>`).join('\n\n')}\n\n<current_rules>\n${current}\n</current_rules>`
+  return `${pages.map(page => `<page url="${page.url}">\n${page.text.replace(/<CodeGroup[\s\S]*?<\/CodeGroup>/g, '')}\n</page>`).join('\n\n')}\n\n<current_rules>\n${current}\n</current_rules>`
 }
 
 // The rules in a reply, when they are safe to put in the rewriter's system prompt: 6 to 16 "- " lines,
